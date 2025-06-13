@@ -1,1 +1,14 @@
-/.specstory 
+/.specstory
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+env/
+.env
+.DS_Store
+.sesskey
+sample_data.json
+*.log 
