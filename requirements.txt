@@ -1,0 +1,27 @@
+# FastHTML Web Framework
+python-fasthtml>=0.2.0
+
+# ASGI server for production and development
+uvicorn>=0.20.0
+
+# Garmin Connect API
+garminconnect>=0.2.28
+
+# Garmin authentication library (used by garminconnect)
+garth>=0.5.13
+
+# HTTP client for FastHTML
+httpx>=0.24.0
+
+# Session management and security
+itsdangerous>=2.1.0
+
+# Date and time utilities
+python-dateutil>=2.8.0
+
+# For better error handling and logging
+loguru>=0.7.0
+
+# Additional FastHTML dependencies
+starlette>=0.37.0
+jinja2>=3.1.0 

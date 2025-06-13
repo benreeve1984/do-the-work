@@ -1,0 +1,86 @@
+# Do The Work - FastHTML Garmin Connect App
+
+## Project Overview
+This is a mobile-friendly FastHTML web application that displays Garmin Connect Daily Active Calories data. The app shows a dashboard with 30-day averages, monthly ramp rates, and 12-month historical charts.
+
+## Architecture & Stack
+- **Framework**: FastHTML (Python-based web framework)
+- **Data Source**: garminconnect Python library
+- **Deployment**: Vercel with Python runtime
+- **UI**: Mobile-first responsive design with modern CSS
+- **Authentication**: Session-based with Garmin credentials
+
+## FastHTML Best Practices
+- Use FastHTML's declarative HTML components (Div, H1, Form, etc.)
+- Leverage FastHTML's routing with @app.get() and @app.post() decorators
+- Use FastHTML's built-in session management for user state
+- Implement HTMX patterns for dynamic updates without page reloads
+- Use FastHTML's CSS and JS helpers for styling and interactivity
+- Follow FastHTML's component composition patterns
+
+## Code Structure
+```
+/
+├── main.py              # FastHTML app entry point
+├── garmin_data.py       # Garmin Connect data extraction
+├── static/
+│   ├── style.css        # Mobile-first responsive CSS
+│   └── chart.js         # Chart visualization
+├── requirements.txt     # Python dependencies
+├── vercel.json         # Vercel deployment config
+└── README.md           # Project documentation
+```
+
+## Key Features to Implement
+1. **Login Form**: Simple form with username/password for Garmin Connect
+2. **Dashboard**: 
+   - Hero number: 30-day average daily active calories
+   - Trend indicator: Monthly ramp rate with up/down arrows
+   - Chart: 12-month historical data visualization
+3. **Error Handling**: Graceful handling of auth failures and API errors
+4. **Mobile Responsive**: Touch-friendly interface, readable on small screens
+
+## FastHTML Patterns to Use
+- Use `serve()` for development and production
+- Implement route handlers with proper HTTP methods
+- Use FastHTML's session management for login state
+- Leverage FastHTML's templating with Python f-strings
+- Use FastHTML's CSS classes and styling utilities
+- Implement forms with FastHTML's Form component and validation
+
+## Vercel Deployment Requirements
+- Include `vercel.json` with Python runtime configuration
+- Use `requirements.txt` for dependencies
+- Ensure main.py exports the FastHTML app as `app`
+- Handle environment variables for any secrets
+- Keep cold start times minimal
+
+## Data Processing
+- Use garminconnect library for API calls
+- Cache data appropriately to avoid rate limits
+- Calculate 30-day averages and monthly trends
+- Handle timezone considerations for daily data
+- Process data for chart visualization (JSON format)
+
+## UI/UX Guidelines
+- Mobile-first responsive design
+- Clean, modern interface with good contrast
+- Fast loading and minimal JavaScript
+- Clear data visualization with charts
+- Intuitive navigation and error states
+- Accessible design patterns
+
+## Security Considerations
+- Never store Garmin credentials in plain text
+- Use session-based authentication
+- Implement proper error handling without exposing internals
+- Validate all user inputs
+- Use HTTPS in production
+
+## Development Workflow
+- Start with basic FastHTML app structure
+- Implement Garmin data extraction separately
+- Build responsive UI components
+- Add chart visualization
+- Test deployment on Vercel
+- Implement error handling and edge cases 

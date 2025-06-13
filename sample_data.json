@@ -1,0 +1,72 @@
+{
+  "success": true,
+  "metrics": {
+    "avg_30_day_calories": 1002.0,
+    "monthly_ramp_rate": 4.5,
+    "total_days": 366,
+    "active_days": 366
+  },
+  "monthly_data": [
+    {
+      "month": "2024-07",
+      "average_calories": 815.6,
+      "days_recorded": 31
+    },
+    {
+      "month": "2024-08",
+      "average_calories": 917.4,
+      "days_recorded": 31
+    },
+    {
+      "month": "2024-09",
+      "average_calories": 896.3,
+      "days_recorded": 30
+    },
+    {
+      "month": "2024-10",
+      "average_calories": 524.9,
+      "days_recorded": 31
+    },
+    {
+      "month": "2024-11",
+      "average_calories": 880.9,
+      "days_recorded": 30
+    },
+    {
+      "month": "2024-12",
+      "average_calories": 760.5,
+      "days_recorded": 31
+    },
+    {
+      "month": "2025-01",
+      "average_calories": 930.0,
+      "days_recorded": 31
+    },
+    {
+      "month": "2025-02",
+      "average_calories": 1052.5,
+      "days_recorded": 28
+    },
+    {
+      "month": "2025-03",
+      "average_calories": 1128.0,
+      "days_recorded": 31
+    },
+    {
+      "month": "2025-04",
+      "average_calories": 1084.7,
+      "days_recorded": 30
+    },
+    {
+      "month": "2025-05",
+      "average_calories": 853.0,
+      "days_recorded": 31
+    },
+    {
+      "month": "2025-06",
+      "average_calories": 1129.2,
+      "days_recorded": 13
+    }
+  ],
+  "last_updated": "2025-06-13T20:59:54.993059"
+}
