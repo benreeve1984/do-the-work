@@ -296,6 +296,14 @@ body {
   gap: var(--tp-spacing-xs);
 }
 
+.stat-subtitle-secondary {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--tp-text-primary);
+  margin-bottom: var(--tp-spacing-xs);
+  margin-top: var(--tp-spacing-xs);
+}
+
 .trend-icon {
   font-size: 16px;
   font-weight: 600;

@@ -65,6 +65,16 @@ function initChart(data) {
                         filter: function(legendItem, chartData) {
                             // Only show the Annual Average legend
                             return legendItem.text === 'Annual Average';
+                        },
+                        generateLabels: function(chart) {
+                            return [{
+                                text: `Annual Average: ${Math.round(data.annualAverage)} cal/day`,
+                                fillStyle: '#ff6b35',
+                                strokeStyle: '#ff6b35',
+                                lineWidth: 2,
+                                lineDash: [5, 5],
+                                pointStyle: 'line'
+                            }];
                         }
                     }
                 },

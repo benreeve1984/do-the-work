@@ -40,7 +40,12 @@ def TrainingPeaksLayout(title: str, *content):
             Header(
                 Div(
                     H1("Do The Work", cls="logo"),
-                    Div("Garmin Connect Analytics", cls="tagline"),
+                    Div(
+                        "Garmin Connect analytics inspired by ",
+                        A("Alan Couzens", href="https://alancouzens.substack.com/p/its-time-to-get-real-about-the-work", 
+                          target="_blank", style="color: #ff6b35; text-decoration: none;"),
+                        cls="tagline"
+                    ),
                     cls="header-content"
                 ),
                 cls="header"
@@ -202,7 +207,33 @@ def get(session):
         avg_30_day = f"{avg_30_day_value:.0f}"
         ramp_trend = "up" if ramp_rate > 0 else "down" if ramp_rate < 0 else "neutral"
         calorie_sign = "+" if calorie_change >= 0 else ""
-        ramp_display = f"{ramp_rate:+.1f}% ({calorie_sign}{calorie_change:.0f} cal/day)"
+        ramp_display_percent = f"{ramp_rate:+.1f}%"
+        ramp_display_calories = f"{calorie_sign}{calorie_change:.0f} cal/day"
+        
+        # Calculate 3-month average for performance level
+        three_month_data = data[-90:] if len(data) >= 90 else data
+        three_month_calories = [day['active_calories'] for day in three_month_data if day['active_calories'] > 0]
+        three_month_avg = sum(three_month_calories) / len(three_month_calories) if three_month_calories else 0
+        
+        # Determine performance level
+        if three_month_avg < 500:
+            performance_level = "Health & Fitness"
+            level_color = "#94a3b8"
+        elif three_month_avg < 1000:
+            performance_level = "Recreational"
+            level_color = "#22c55e"
+        elif three_month_avg < 1500:
+            performance_level = "Developmental" 
+            level_color = "#f59e0b"
+        elif three_month_avg < 2000:
+            performance_level = "Competitive"
+            level_color = "#0077be"
+        elif three_month_avg < 3000:
+            performance_level = "Top Amateur"
+            level_color = "#8b5cf6"
+        else:
+            performance_level = "Elite/Pro"
+            level_color = "#ff6b35"
         
         # Prepare chart data with proper month formatting
         chart_labels = []
@@ -237,16 +268,23 @@ def get(session):
                     avg_30_day,
                     "Active Calories/Day",
                 ),
-                StatCard(
-                    "Monthly Trend",
-                    ramp_display,
-                    "vs Previous 30 Days",
-                    ramp_trend
+                Div(
+                    Div("Monthly Trend", cls="stat-title"),
+                    Div(ramp_display_percent, cls="stat-value"),
+                    Div(ramp_display_calories, cls="stat-subtitle-secondary"),
+                    Div(
+                        "vs Previous 30 Days",
+                        Span(f" {'↗' if ramp_trend == 'up' else '↘' if ramp_trend == 'down' else ''}", cls=f"trend-icon trend-{ramp_trend}") if ramp_trend != "neutral" else "",
+                        cls="stat-subtitle"
+                    ),
+                    cls="stat-card"
                 ),
-                StatCard(
-                    "Total Days",
-                    str(len([d for d in data if d.get('active_calories', 0) > 0])),
-                    "Data Coverage"
+                Div(
+                    Div("Performance Level", cls="stat-title"),
+                    Div(performance_level, cls="stat-value"),
+                    Div(f"{three_month_avg:.0f} cal/day", cls="stat-subtitle-secondary"),
+                    Div("3-Month Average", cls="stat-subtitle"),
+                    cls="stat-card"
                 ),
                 cls="metrics-grid"
             ),
@@ -267,14 +305,20 @@ def get(session):
                 Div(
                     Div(
                         H4("Best Month"),
-                        P(f"{max(monthly_data, key=lambda x: x['average_calories'])['month'] if monthly_data else 'N/A'}"),
+                        P(f"{['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][int(max(monthly_data, key=lambda x: x['average_calories'])['month'].split('-')[1]) - 1]}-{max(monthly_data, key=lambda x: x['average_calories'])['month'].split('-')[0][-2:]}" if monthly_data else "N/A"),
                         P(f"{max(monthly_data, key=lambda x: x['average_calories'])['average_calories']:.0f} cal/day" if monthly_data else "No data", cls="insight-value"),
                         cls="insight-card"
                     ),
                     Div(
                         H4("Biggest Day"),
-                        P(f"{max(data, key=lambda x: x.get('active_calories', 0))['date'] if data else 'N/A'}"),
+                        P(f"{datetime.strptime(max(data, key=lambda x: x.get('active_calories', 0))['date'], '%Y-%m-%d').strftime('%-d-%b-%y') if data else 'N/A'}"),
                         P(f"{max(data, key=lambda x: x.get('active_calories', 0))['active_calories']:.0f} calories" if data else "No data", cls="insight-value"),
+                        cls="insight-card"
+                    ),
+                    Div(
+                        H4("Annual Average"),
+                        P("12-Month Average"),
+                        P(f"{annual_average:.0f} cal/day", cls="insight-value"),
                         cls="insight-card"
                     ),
                     cls="insights-grid"
