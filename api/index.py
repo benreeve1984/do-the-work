@@ -33,6 +33,25 @@ def TrainingPeaksLayout(title: str, *content):
             Meta(charset="utf-8"),
             Meta(name="viewport", content="width=device-width, initial-scale=1"),
             Title(f"{title} | Do The Work"),
+            
+            # OpenGraph meta tags for social media previews
+            Meta(property="og:title", content=f"{title} | Do The Work"),
+            Meta(property="og:description", content="Garmin Connect analytics inspired by Alan Couzens. Track your daily active calories with 30-day averages, monthly trends, and performance insights."),
+            Meta(property="og:type", content="website"),
+            Meta(property="og:image", content="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1200&h=630&fit=crop"),
+            Meta(property="og:image:width", content="1200"),
+            Meta(property="og:image:height", content="630"),
+            Meta(property="og:site_name", content="Do The Work"),
+            
+            # Twitter Card meta tags
+            Meta(name="twitter:card", content="summary_large_image"),
+            Meta(name="twitter:title", content=f"{title} | Do The Work"),
+            Meta(name="twitter:description", content="Garmin Connect analytics inspired by Alan Couzens. Track your daily active calories with 30-day averages, monthly trends, and performance insights."),
+            Meta(name="twitter:image", content="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1200&h=630&fit=crop"),
+            
+            # Standard meta description
+            Meta(name="description", content="Garmin Connect analytics inspired by Alan Couzens. Track your daily active calories with 30-day averages, monthly trends, and performance insights."),
+            
             css,
             chart_js
         ),
