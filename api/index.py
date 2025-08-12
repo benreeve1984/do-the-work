@@ -272,6 +272,7 @@ def get(session):
         
         # Activity calories by type over the last 30 days (average per day, including unlogged portion)
         activity_breakdown = extractor.get_activity_calories_breakdown(start_date, end_date, data)
+        panel_avg_30 = avg_30_day_value  # exact same source as the 30-day panel
         
         return TrainingPeaksLayout(
             "Dashboard",
@@ -325,24 +326,25 @@ def get(session):
             Div(
                 H3("Active Calories by Activity Type (30-day avg)", cls="chart-title"),
                 Div(
-                    f"Percentages reflect share of last-30-day average daily active calories (~ {int(round(activity_breakdown.get('total_active_avg', 0))):,} cal/day).",
+                    f"Percentages reflect share of last-30-day average daily active calories (~ {int(round(panel_avg_30)):,} cal/day).",
                     cls="activity-note"
                 ),
                 Div(
                     *[
-                        Div(
+                        (lambda pct: Div(
                             Div(item['type'], cls="activity-type"),
                             Div(
-                                Div(cls="progress-bar-fill", style=f"width: {item['percent']}%"),
+                                Div(cls="progress-bar-fill", style=f"width: {pct}%"),
                                 cls="progress-bar"
                             ),
                             Div(
                                 Span(f"{int(round(item['calories'])):,} cal/day", cls="activity-calories"),
-                                Span(f"{item['percent']:.1f}% of daily active", cls="activity-percent"),
+                                Span(f"{pct:.1f}% of daily active", cls="activity-percent"),
                                 cls="activity-stats"
                             ),
                             cls="activity-item"
-                        ) for item in activity_breakdown.get('by_type', [])
+                        ))(max(0.0, min(100.0, (item['calories'] / panel_avg_30 * 100.0) if panel_avg_30 > 0 else 0.0)))
+                        for item in activity_breakdown.get('by_type', [])
                     ],
                     cls="activity-breakdown-grid"
                 ),

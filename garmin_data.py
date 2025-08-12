@@ -416,8 +416,8 @@ class GarminDataExtractor:
         # Fetch activities only for the last 30-day window
         activities = self._get_activities_in_range(last30_start, end_date)
 
-        # Aggregate calories by activity type and per-day totals from activities
-        calories_by_type_total: Dict[str, float] = defaultdict(float)
+        # Aggregate calories by activity type PER DAY first, to reconcile with daily active calories
+        type_cals_by_date: Dict[str, Dict[str, float]] = defaultdict(lambda: defaultdict(float))
         activity_cals_by_date: Dict[str, float] = defaultdict(float)
 
         for act in activities:
@@ -425,33 +425,54 @@ class GarminDataExtractor:
             if cals <= 0 or not date_str or date_str not in last30_dates:
                 continue
             display_type = act_type.replace('_', ' ').title() if act_type else 'Unknown'
-            calories_by_type_total[display_type] += cals
+            type_cals_by_date[date_str][display_type] += cals
             activity_cals_by_date[date_str] += cals
 
-        # Average daily active calories across the last 30 days
-        total_active_sum = float(sum(d.get('active_calories', 0) for d in last30_stats))
-        total_active_avg = (total_active_sum / day_count) if day_count > 0 else 0.0
+        # Compute 30-day average on active days only (to match dashboard panel)
+        # Sort last30_stats to preserve chronological order
+        last30_stats_sorted = sorted(last30_stats, key=lambda d: d.get('date', ''))
+        total_active_avg = self.calculate_30_day_average(last30_stats_sorted)
 
-        # Compute "Activities not logged, e.g. walking" across the last 30 days
+        # Build set of active days in last 30 days (non-zero active calories)
+        active_days = {d['date'] for d in last30_stats if d.get('active_calories', 0) > 0 and d.get('date')}
+        active_day_count = len(active_days)
+
+        # Now reconcile per day: cap activity calories at the day's active calories, scaling types proportionally
+        calories_by_type_total: Dict[str, float] = defaultdict(float)
         unlogged_sum = 0.0
         for date_str in last30_dates:
             day_active = float(next((d.get('active_calories', 0) for d in last30_stats if d.get('date') == date_str), 0.0))
-            day_activity = float(activity_cals_by_date.get(date_str, 0.0))
-            remainder = max(day_active - day_activity, 0.0)
+            if day_active <= 0:
+                continue
+            per_type = type_cals_by_date.get(date_str, {})
+            day_activity_total = float(sum(per_type.values()))
+            if day_activity_total <= 0:
+                # No recorded activity; everything is unlogged
+                unlogged_sum += day_active
+                continue
+            # If activities exceed day_active, scale down proportionally
+            scale = min(1.0, day_active / day_activity_total)
+            scaled_sum = 0.0
+            for t, val in per_type.items():
+                scaled_val = val * scale
+                calories_by_type_total[t] += scaled_val
+                scaled_sum += scaled_val
+            # Any remainder (if activities less than active) becomes unlogged for this day
+            remainder = max(day_active - scaled_sum, 0.0)
             unlogged_sum += remainder
 
         if unlogged_sum > 0:
             calories_by_type_total['Activities not logged, e.g. walking'] += unlogged_sum
 
-        # Convert totals to average per day for each type
+        # Convert totals to average per active day for each type
         by_type_list: List[Dict[str, Any]] = []
         for t, total in sorted(calories_by_type_total.items(), key=lambda x: x[1], reverse=True):
-            avg_daily = (total / day_count) if day_count > 0 else 0.0
-            percent = (avg_daily / total_active_avg * 100.0) if total_active_avg > 0 else 0.0
+            avg_daily = (total / active_day_count) if active_day_count > 0 else 0.0
             by_type_list.append({
                 'type': t,
                 'calories': round(avg_daily, 1),
-                'percent': round(percent, 1)
+                # percent is computed at render-time from the same panel baseline to ensure identity
+                'percent': 0.0
             })
 
         return {
