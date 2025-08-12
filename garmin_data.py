@@ -390,59 +390,73 @@ class GarminDataExtractor:
         daily_stats: List[Dict]
     ) -> Dict[str, Any]:
         """
-        Compute active calories by Garmin activity type across the date range.
-        Also calculates "Activities not logged" as the portion of daily active
-        calories not associated with any recorded activity.
+        Compute average daily active calories over the last 30 days by Garmin
+        activity type. Also calculates "Activities not logged, e.g. walking"
+        for the portion of daily active calories not associated with recorded
+        activities.
 
         Returns a dict with keys:
             - by_type: List[{ type: str, calories: float, percent: float }]
-            - total_active: float
+            - total_active_avg: float  (average daily active calories)
         """
-        activities = self._get_activities_in_range(start_date, end_date)
+        # Derive exact last-30-day window within provided range
+        last30_start = max(start_date, end_date - timedelta(days=29))
+
+        # Build set of date strings for the last 30 days (inclusive)
+        last30_dates: List[str] = []
+        tmp = last30_start.date()
+        while tmp <= end_date.date():
+            last30_dates.append(tmp.strftime('%Y-%m-%d'))
+            tmp = tmp + timedelta(days=1)
+        day_count = len(last30_dates)
+
+        # Restrict daily_stats to last 30 days
+        last30_stats = [d for d in daily_stats if d.get('date') in last30_dates]
+
+        # Fetch activities only for the last 30-day window
+        activities = self._get_activities_in_range(last30_start, end_date)
 
         # Aggregate calories by activity type and per-day totals from activities
-        calories_by_type: Dict[str, float] = defaultdict(float)
+        calories_by_type_total: Dict[str, float] = defaultdict(float)
         activity_cals_by_date: Dict[str, float] = defaultdict(float)
 
         for act in activities:
             act_type, cals, date_str = self._extract_activity_fields(act)
-            if cals <= 0 or not date_str:
+            if cals <= 0 or not date_str or date_str not in last30_dates:
                 continue
-            # Normalize type key for display
             display_type = act_type.replace('_', ' ').title() if act_type else 'Unknown'
-            calories_by_type[display_type] += cals
+            calories_by_type_total[display_type] += cals
             activity_cals_by_date[date_str] += cals
 
-        # Total active calories from daily stats
-        total_active = float(sum(d.get('active_calories', 0) for d in daily_stats))
+        # Average daily active calories across the last 30 days
+        total_active_sum = float(sum(d.get('active_calories', 0) for d in last30_stats))
+        total_active_avg = (total_active_sum / day_count) if day_count > 0 else 0.0
 
-        # Compute "Activities not logged" across the period
-        unlogged_total = 0.0
-        for d in daily_stats:
-            date_str = d.get('date')
-            if not date_str:
-                continue
-            day_active = float(d.get('active_calories', 0))
+        # Compute "Activities not logged, e.g. walking" across the last 30 days
+        unlogged_sum = 0.0
+        for date_str in last30_dates:
+            day_active = float(next((d.get('active_calories', 0) for d in last30_stats if d.get('date') == date_str), 0.0))
             day_activity = float(activity_cals_by_date.get(date_str, 0.0))
             remainder = max(day_active - day_activity, 0.0)
-            unlogged_total += remainder
+            unlogged_sum += remainder
 
-        if unlogged_total > 0:
-            calories_by_type['Activities not logged'] += unlogged_total
+        if unlogged_sum > 0:
+            calories_by_type_total['Activities not logged, e.g. walking'] += unlogged_sum
 
-        # Build output list sorted by calories desc and compute percentages
+        # Convert totals to average per day for each type
         by_type_list: List[Dict[str, Any]] = []
-        for t, c in sorted(calories_by_type.items(), key=lambda x: x[1], reverse=True):
-            percent = (c / total_active * 100.0) if total_active > 0 else 0.0
+        for t, total in sorted(calories_by_type_total.items(), key=lambda x: x[1], reverse=True):
+            avg_daily = (total / day_count) if day_count > 0 else 0.0
+            percent = (avg_daily / total_active_avg * 100.0) if total_active_avg > 0 else 0.0
             by_type_list.append({
                 'type': t,
-                'calories': round(c, 1),
+                'calories': round(avg_daily, 1),
                 'percent': round(percent, 1)
             })
 
         return {
             'by_type': by_type_list,
-            'total_active': round(total_active, 1)
+            'total_active_avg': round(total_active_avg, 1)
         }
     
     def get_dashboard_data(self, email: str, password: str) -> Dict:

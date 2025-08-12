@@ -362,6 +362,13 @@ body {
   gap: var(--tp-spacing-md);
 }
 
+.activity-note {
+  color: var(--tp-text-secondary);
+  font-size: 13px;
+  margin-bottom: var(--tp-spacing-md);
+  text-align: center;
+}
+
 .activity-item {
   padding: var(--tp-spacing-md) var(--tp-spacing-lg);
   border: 1px solid var(--tp-border-light);
