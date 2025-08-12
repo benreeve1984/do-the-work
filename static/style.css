@@ -346,6 +346,65 @@ body {
   height: auto !important;
 }
 
+/* Activity breakdown section */
+.activity-section {
+  background: var(--tp-bg-card);
+  border-radius: var(--tp-radius-lg);
+  padding: var(--tp-spacing-xl);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--tp-border-light);
+  margin-bottom: var(--tp-spacing-2xl);
+}
+
+.activity-breakdown-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--tp-spacing-md);
+}
+
+.activity-item {
+  padding: var(--tp-spacing-md) var(--tp-spacing-lg);
+  border: 1px solid var(--tp-border-light);
+  border-radius: var(--tp-radius-md);
+  background: #fff;
+}
+
+.activity-type {
+  font-weight: 600;
+  color: var(--tp-text-primary);
+  margin-bottom: var(--tp-spacing-sm);
+}
+
+.progress-bar {
+  width: 100%;
+  height: 10px;
+  background: var(--tp-border-light);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--tp-secondary);
+}
+
+.activity-stats {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--tp-spacing-sm);
+  color: var(--tp-text-secondary);
+  font-size: 13px;
+}
+
+.activity-calories {
+  font-weight: 600;
+  color: var(--tp-text-primary);
+}
+
+.activity-percent {
+  font-weight: 600;
+}
+
 /* Insights section */
 .insights-section {
   margin-bottom: var(--tp-spacing-2xl);

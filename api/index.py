@@ -270,6 +270,9 @@ def get(session):
         # Calculate annual average for chart line
         annual_average = sum(chart_values) / len(chart_values) if chart_values else 0
         
+        # Activity calories by type (including unlogged portion)
+        activity_breakdown = extractor.get_activity_calories_breakdown(start_date, end_date, data)
+        
         return TrainingPeaksLayout(
             "Dashboard",
             
@@ -316,6 +319,30 @@ def get(session):
                     cls="chart-container"
                 ),
                 cls="chart-section"
+            ),
+            
+            # Activity calories by type section
+            Div(
+                H3("Active Calories by Activity Type", cls="chart-title"),
+                Div(
+                    *[
+                        Div(
+                            Div(item['type'], cls="activity-type"),
+                            Div(
+                                Div(cls="progress-bar-fill", style=f"width: {item['percent']}%"),
+                                cls="progress-bar"
+                            ),
+                            Div(
+                                Span(f"{int(item['calories']):,} cal", cls="activity-calories"),
+                                Span(f"{item['percent']:.1f}%", cls="activity-percent"),
+                                cls="activity-stats"
+                            ),
+                            cls="activity-item"
+                        ) for item in activity_breakdown.get('by_type', [])
+                    ],
+                    cls="activity-breakdown-grid"
+                ),
+                cls="activity-section"
             ),
             
             # Data insights

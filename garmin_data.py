@@ -9,6 +9,8 @@ data from Garmin Connect using the garminconnect library.
 import sys
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
+from typing import Any
+from collections import defaultdict
 import statistics
 import json
 import concurrent.futures
@@ -262,6 +264,186 @@ class GarminDataExtractor:
         # Sort by month and return last 12 months
         monthly_averages.sort(key=lambda x: x['month'])
         return monthly_averages[-12:]
+    
+    def _extract_activity_fields(self, activity: Dict[str, Any]) -> Tuple[str, float, str]:
+        """
+        Extract activity type, calories, and date string from a Garmin activity object.
+
+        Returns:
+            (activity_type, calories, date_str)
+        """
+        # Activity type extraction with fallbacks
+        activity_type: str = "unknown"
+        if isinstance(activity.get('activityType'), dict):
+            activity_type = activity['activityType'].get('typeKey') or activity['activityType'].get('typeId') or activity_type
+        elif isinstance(activity.get('activityTypeDTO'), dict):
+            activity_type = activity['activityTypeDTO'].get('typeKey') or activity_type
+        elif isinstance(activity.get('activityType'), str):
+            activity_type = activity['activityType']
+
+        # Calories field
+        calories_val = activity.get('calories')
+        if calories_val is None:
+            # Some schemas use 'kilocalories' or 'energyConsumption'
+            calories_val = activity.get('kilocalories', activity.get('energyConsumption'))
+        try:
+            calories: float = float(calories_val) if calories_val is not None else 0.0
+        except Exception:
+            calories = 0.0
+
+        # Date/time field extraction
+        # Prefer local date; fall back to GMT; final fallback to startTime
+        time_str = activity.get('startTimeLocal') or activity.get('startTimeGMT') or activity.get('startTime')
+        date_str = ""
+        if time_str:
+            # Examples: '2024-05-03 06:30:00'
+            try:
+                # Replace 'T' if present, keep date portion
+                cleaned = time_str.replace('T', ' ')
+                dt = datetime.fromisoformat(cleaned.split('.')[0])
+                date_str = dt.strftime('%Y-%m-%d')
+            except Exception:
+                try:
+                    # Fallback simple slicing of date portion
+                    date_str = time_str[:10]
+                except Exception:
+                    date_str = ""
+
+        return activity_type, calories, date_str
+
+    def _get_activities_in_range(self, start_date: datetime, end_date: datetime) -> List[Dict[str, Any]]:
+        """
+        Fetch activities from Garmin within the given date range using the most
+        efficient available API in the client. Falls back to pagination if needed.
+        """
+        if not self.authenticated:
+            raise Exception("Not authenticated. Please login first.")
+
+        activities: List[Dict[str, Any]] = []
+
+        # First preference: API that fetches by date range directly
+        if hasattr(self.client, 'get_activities_by_date'):
+            try:
+                activities = self.client.get_activities_by_date(
+                    start_date.strftime('%Y-%m-%d'),
+                    end_date.strftime('%Y-%m-%d')
+                ) or []
+                return activities
+            except Exception:
+                # Fall through to pagination approach
+                pass
+
+        # Fallback: page through recent activities until we cover the range
+        # Many users have < 1000 activities for a year; we page in reasonable chunks
+        page_start = 0
+        page_size = 200
+        while True:
+            try:
+                batch = self.client.get_activities(page_start, page_size) or []
+            except Exception:
+                break
+
+            if not batch:
+                break
+
+            activities.extend(batch)
+
+            # Determine if we've gone past the start_date; if so, we can stop
+            try:
+                oldest_dt_str = (
+                    batch[-1].get('startTimeLocal')
+                    or batch[-1].get('startTimeGMT')
+                    or batch[-1].get('startTime')
+                    or ''
+                )
+                if oldest_dt_str:
+                    cleaned = oldest_dt_str.replace('T', ' ')
+                    oldest_dt = datetime.fromisoformat(cleaned.split('.')[0])
+                    if oldest_dt.date() < start_date.date():
+                        break
+            except Exception:
+                # If we cannot parse date, fetch one more page and then stop to avoid loops
+                if page_start > page_size * 5:
+                    break
+
+            page_start += page_size
+
+        # Filter activities to the specified range
+        filtered: List[Dict[str, Any]] = []
+        for act in activities:
+            _, _, date_str = self._extract_activity_fields(act)
+            if not date_str:
+                continue
+            try:
+                d = datetime.strptime(date_str, '%Y-%m-%d').date()
+                if start_date.date() <= d <= end_date.date():
+                    filtered.append(act)
+            except Exception:
+                continue
+
+        return filtered
+
+    def get_activity_calories_breakdown(
+        self,
+        start_date: datetime,
+        end_date: datetime,
+        daily_stats: List[Dict]
+    ) -> Dict[str, Any]:
+        """
+        Compute active calories by Garmin activity type across the date range.
+        Also calculates "Activities not logged" as the portion of daily active
+        calories not associated with any recorded activity.
+
+        Returns a dict with keys:
+            - by_type: List[{ type: str, calories: float, percent: float }]
+            - total_active: float
+        """
+        activities = self._get_activities_in_range(start_date, end_date)
+
+        # Aggregate calories by activity type and per-day totals from activities
+        calories_by_type: Dict[str, float] = defaultdict(float)
+        activity_cals_by_date: Dict[str, float] = defaultdict(float)
+
+        for act in activities:
+            act_type, cals, date_str = self._extract_activity_fields(act)
+            if cals <= 0 or not date_str:
+                continue
+            # Normalize type key for display
+            display_type = act_type.replace('_', ' ').title() if act_type else 'Unknown'
+            calories_by_type[display_type] += cals
+            activity_cals_by_date[date_str] += cals
+
+        # Total active calories from daily stats
+        total_active = float(sum(d.get('active_calories', 0) for d in daily_stats))
+
+        # Compute "Activities not logged" across the period
+        unlogged_total = 0.0
+        for d in daily_stats:
+            date_str = d.get('date')
+            if not date_str:
+                continue
+            day_active = float(d.get('active_calories', 0))
+            day_activity = float(activity_cals_by_date.get(date_str, 0.0))
+            remainder = max(day_active - day_activity, 0.0)
+            unlogged_total += remainder
+
+        if unlogged_total > 0:
+            calories_by_type['Activities not logged'] += unlogged_total
+
+        # Build output list sorted by calories desc and compute percentages
+        by_type_list: List[Dict[str, Any]] = []
+        for t, c in sorted(calories_by_type.items(), key=lambda x: x[1], reverse=True):
+            percent = (c / total_active * 100.0) if total_active > 0 else 0.0
+            by_type_list.append({
+                'type': t,
+                'calories': round(c, 1),
+                'percent': round(percent, 1)
+            })
+
+        return {
+            'by_type': by_type_list,
+            'total_active': round(total_active, 1)
+        }
     
     def get_dashboard_data(self, email: str, password: str) -> Dict:
         """
