@@ -93,10 +93,8 @@ def StatCard(title: str, value: str, subtitle: str = "", trend: str = ""):
 
 @rt("/")
 def get(session):
-    """Home page - redirect to login if not authenticated"""
-    if not session.get('authenticated'):
-        return RedirectResponse('/login')
-    return RedirectResponse('/dashboard')
+    """Always land on login page"""
+    return RedirectResponse('/login')
 
 @rt("/login")
 def get(session):
@@ -190,7 +188,8 @@ def post(username: str, password: str, session):
 @rt("/dashboard")
 def get(session):
     """Main dashboard with TrainingPeaks-style data visualization"""
-    if not session.get('authenticated'):
+    # Redirect to login if user session is not authenticated or backend client lost auth (cold start)
+    if not session.get('authenticated') or not extractor.authenticated:
         return RedirectResponse('/login')
     
     try:
