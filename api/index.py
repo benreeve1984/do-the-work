@@ -210,8 +210,8 @@ def get(session):
         if len(data) >= 60:
             recent_30 = data[-30:]
             previous_30 = data[-60:-30]
-            recent_calories = [day['active_calories'] for day in recent_30 if day['active_calories'] > 0]
-            previous_calories = [day['active_calories'] for day in previous_30 if day['active_calories'] > 0]
+            recent_calories = [(day.get('active_calories') or 0) for day in recent_30 if (day.get('active_calories') or 0) > 0]
+            previous_calories = [(day.get('active_calories') or 0) for day in previous_30 if (day.get('active_calories') or 0) > 0]
             
             if recent_calories and previous_calories:
                 recent_avg = sum(recent_calories) / len(recent_calories)
@@ -231,7 +231,7 @@ def get(session):
         
         # Calculate 3-month average for performance level
         three_month_data = data[-90:] if len(data) >= 90 else data
-        three_month_calories = [day['active_calories'] for day in three_month_data if day['active_calories'] > 0]
+        three_month_calories = [(day.get('active_calories') or 0) for day in three_month_data if (day.get('active_calories') or 0) > 0]
         three_month_avg = sum(three_month_calories) / len(three_month_calories) if three_month_calories else 0
         
         # Determine performance level

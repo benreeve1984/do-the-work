@@ -81,13 +81,22 @@ class GarminDataExtractor:
         """
         try:
             daily_stats = self.client.get_stats(date_str)
-            active_calories = daily_stats.get('activeKilocalories', 0)
-            
+            # Coerce to numeric values and guard against None
+            def coerce_number(val):
+                try:
+                    return float(val) if val is not None else 0.0
+                except Exception:
+                    return 0.0
+
+            active_calories = coerce_number(daily_stats.get('activeKilocalories'))
+            total_calories = coerce_number(daily_stats.get('totalKilocalories'))
+            bmr_calories = coerce_number(daily_stats.get('bmrKilocalories'))
+
             return {
                 'date': date_str,
                 'active_calories': active_calories,
-                'total_calories': daily_stats.get('totalKilocalories', 0),
-                'bmr_calories': daily_stats.get('bmrKilocalories', 0)
+                'total_calories': total_calories,
+                'bmr_calories': bmr_calories
             }
         except GarminConnectTooManyRequestsError:
             print(f"⚠️  Rate limit reached for {date_str}")
@@ -156,7 +165,7 @@ class GarminDataExtractor:
                         print(f"  📈 Progress: {completed}/{total_days} days ({completed/total_days*100:.1f}%)")
                     
                     # Show successful data points
-                    if 'error' not in result and result['active_calories'] > 0:
+                    if 'error' not in result and (result.get('active_calories') or 0) > 0:
                         print(f"  ✅ {result['date']}: {result['active_calories']} active calories")
             
             # Sort by date to maintain chronological order
@@ -169,7 +178,7 @@ class GarminDataExtractor:
                 result = self._get_single_day_stats(date_str)
                 data.append(result)
                 
-                if 'error' not in result and result['active_calories'] > 0:
+                if 'error' not in result and (result.get('active_calories') or 0) > 0:
                     print(f"  {result['date']}: {result['active_calories']} active calories")
                 
                 # Progress for sequential
@@ -210,11 +219,19 @@ class GarminDataExtractor:
         
         # Last 30 days
         recent_30 = data[-30:]
-        recent_calories = [day['active_calories'] for day in recent_30 if day['active_calories'] > 0]
+        recent_calories = [
+            (day.get('active_calories') or 0)
+            for day in recent_30
+            if (day.get('active_calories') or 0) > 0
+        ]
         
         # Previous 30 days (30-60 days ago)
         previous_30 = data[-60:-30]
-        previous_calories = [day['active_calories'] for day in previous_30 if day['active_calories'] > 0]
+        previous_calories = [
+            (day.get('active_calories') or 0)
+            for day in previous_30
+            if (day.get('active_calories') or 0) > 0
+        ]
         
         if not recent_calories or not previous_calories:
             return 0.0
